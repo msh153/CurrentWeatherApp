@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="100" d:DesignHeight="150"
+        Width="360"
+        Height="220"
+        x:Class="WeatherAppAvalonia.MainWindow"
+        Title="WeatherAppAvalonia"
+        WindowStartupLocation="CenterScreen">
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border Background="White"
+                Padding="15"
+                CornerRadius="8">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Місто:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox x:Name="CityTextBox"
+                              KeyDown="CityTextBox_KeyDown"
+                              Watermark="Назва міста"
+                              Width="150">
+                        <ToolTip.Tip>Введіть місто або залиште порожнім для автовизначення</ToolTip.Tip>
+                    </TextBox>
+                    <Button Content="Оновити" 
+                            Margin="5,0,0,0" 
+                            Click="OnRefreshButtonClick"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusBlock" 
+                           Foreground="Red" 
+                           Margin="0,5,0,0" 
+                           TextWrapping="Wrap"
+                           FontSize="12"/>
+                <TextBlock Text="Поточна погода:" FontWeight="Bold" Margin="0,2,0,5" FontSize="13"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image x:Name="WeatherIcon" Width="48" Height="48" Margin="0,5,5,0"/>
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock x:Name="CityNameBlock" FontSize="14" FontWeight="Medium"/>
+                        <TextBlock x:Name="TempBlock" FontSize="14" />
+                        <TextBlock x:Name="DescBlock" FontSize="14" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
