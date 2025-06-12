@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+namespace WeatherAppAvalonia.Helpers;
+
 class LruCache<TKey, TValue> where TKey : notnull
 {
     private readonly int _capacity;
