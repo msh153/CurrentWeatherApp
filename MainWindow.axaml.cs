@@ -47,9 +47,8 @@ namespace WeatherAppAvalonia
     public partial class MainWindow : Window
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private DateTime lastUpdate = DateTime.MinValue;
-        private string? lastCity = string.Empty;
-        
+        private readonly LruCache<string, (WttrResponse Data, DateTime UpdatedAt)> weatherCache = new(capacity: 30);
+
         public MainWindow()
         {
             InitializeComponent();
@@ -57,15 +56,19 @@ namespace WeatherAppAvalonia
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
             timer.Tick += async (_, _) =>
             {
-                await FetchWeatherData(lastCity, force: false);
+                var currentCity = CityTextBox?.Text;
+                if (!string.IsNullOrWhiteSpace(currentCity))
+                {
+                    await FetchWeatherData(currentCity, force: false);
+                }
             };
             timer.Start();
         }
 
         private async void OnRefreshButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            lastCity = CityTextBox.Text;
-            await FetchWeatherData(lastCity, force: true);
+            var city = CityTextBox.Text;
+            await FetchWeatherData(city, force: true);
         }
 
         private void CityTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -78,74 +81,38 @@ namespace WeatherAppAvalonia
 
         private async Task FetchWeatherData(string? city, bool force = false)
         {
-            if (!force && lastUpdate != DateTime.MinValue && (DateTime.Now - lastUpdate).TotalMinutes < 10)
-                return;
+            string cityKey = string.IsNullOrWhiteSpace(city) ? "auto" : city.Trim().ToLowerInvariant();
 
-            StatusBlock.Text = string.Empty;
+            if (!force && weatherCache.TryGet(cityKey, out var cachedEntry))
+            {
+                if ((DateTime.Now - cachedEntry.UpdatedAt).TotalMinutes < 10)
+                {
+                    ApplyWeatherData(cachedEntry.Data);
+                    return;
+                }
+            }
 
-            string? cityInput =  CityTextBox?.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(cityInput))
-            {
-                StatusBlock.Text = "Виконується автоматичне визначення за IP…";
-            }
-            else
-            {
-                StatusBlock.Text = "";
-            }
-            
-            string url = "https://wttr.in/" + (string.IsNullOrEmpty(cityInput) ? "" : $"{Uri.EscapeDataString(cityInput)}") + "?format=j1";
+            StatusBlock.Text = string.IsNullOrWhiteSpace(city) ? "Виконується автоматичне визначення за IP…" : "";
+
+            string url = "https://wttr.in/" + (string.IsNullOrEmpty(city) ? "" : $"{Uri.EscapeDataString(city)}") + "?format=j1";
 
             try
             {
+                StatusBlock.Text = "Отримання данних…";
                 var response = await httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode(); 
+                response.EnsureSuccessStatusCode();
                 var json = await response.Content.ReadAsStringAsync();
 
+                StatusBlock.Text = "";
                 var data = JsonSerializer.Deserialize<WttrResponse>(json);
                 if (data == null || data.CurrentCondition == null || data.CurrentCondition.Count == 0)
                 {
-                    throw new JsonException("Неправильний формат відповіді API");
-                }
-
-                string? cityName = data.NearestArea?[0]?.AreaName?[0]?.Value;
-                if (string.IsNullOrEmpty(cityName))
-                {
-                    StatusBlock.Text = "Місто не знайдено у відповіді API.";
+                    StatusBlock.Text = "Неправильний формат відповіді API";
                     return;
                 }
 
-                if (!string.IsNullOrWhiteSpace(cityInput) &&
-                    !string.Equals(cityInput, cityName, StringComparison.OrdinalIgnoreCase))
-                {
-                    StatusBlock.Text = $"Місто '{cityInput}' не знайдено. Показано '{cityName}'.";
-                }
-
-                CityNameBlock.Text = cityName;
-                TempBlock.Text = $"{data.CurrentCondition[0].TempC} °C";
-
-                string? descEn = data.CurrentCondition[0].WeatherDesc?[0]?.Value;
-                DescBlock.Text = LocalizeDescription(descEn ?? "Відповідь від сервера відсутня");
-
-                if (descEn != null && IconMap.TryGetValue(descEn, out string? iconName))
-                {
-                    var uri = new Uri($"avares://WeatherAppAvalonia/Assets/WeatherIcons/{iconName}.png");
-
-                    if (AssetLoader.Exists(uri))
-                    {
-                        var stream = AssetLoader.Open(uri);
-                        WeatherIcon.Source = new Bitmap(stream);
-                    }
-                    else
-                    {
-                        WeatherIcon.Source = new Bitmap($"Assets/WeatherIcons/unknown.png");
-                    }
-                }
-                else
-                {
-                    WeatherIcon.Source = new Bitmap($"Assets/WeatherIcons/unknown.png");
-                }
-
-                lastUpdate = DateTime.Now;
+                weatherCache.Set(cityKey, (data, DateTime.Now));
+                ApplyWeatherData(data);
             }
             catch (HttpRequestException ex)
             {
@@ -157,8 +124,29 @@ namespace WeatherAppAvalonia
             }
             catch (Exception ex)
             {
-                StatusBlock.Text = "Невідома помилка: " + ex.Message;
+                StatusBlock.Text = "Помилка: " + ex.Message;
             }
+        }
+
+        private void ApplyWeatherData(WttrResponse data)
+        {
+            string? cityName = data.NearestArea?[0]?.AreaName?[0]?.Value ?? "Невідомо";
+            CityNameBlock.Text = cityName;
+            TempBlock.Text = $"{data.CurrentCondition?[0]?.TempC} °C";
+            string? descEn = data.CurrentCondition?[0].WeatherDesc?[0]?.Value;
+            DescBlock.Text = LocalizeDescription(descEn ?? "Немає опису");
+            
+
+            if (descEn == null || !IconMap.TryGetValue(descEn, out string? iconName))
+            {
+                WeatherIcon.Source = new Bitmap($"Assets/WeatherIcons/unknown.png");
+                return;
+            }
+
+            var uri = new Uri($"avares://WeatherAppAvalonia/Assets/WeatherIcons/{iconName}.png");
+            WeatherIcon.Source = AssetLoader.Exists(uri)
+                ? new Bitmap(AssetLoader.Open(uri))
+                : new Bitmap($"Assets/WeatherIcons/unknown.png");
         }
 
         private string LocalizeDescription(string desc)

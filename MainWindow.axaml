@@ -6,7 +6,7 @@
         Width="360"
         Height="220"
         x:Class="WeatherAppAvalonia.MainWindow"
-        Title="WeatherAppAvalonia"
+        Title="WeatherApp"
         WindowStartupLocation="CenterScreen">
     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
         <Border Background="White"
