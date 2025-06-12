@@ -83,8 +83,7 @@ namespace WeatherAppAvalonia
 
             StatusBlock.Text = string.Empty;
 
-            string cityInput =  CityTextBox?.Text?.Trim();
-            Console.WriteLine(cityInput);
+            string? cityInput =  CityTextBox?.Text?.Trim();
             if (string.IsNullOrWhiteSpace(cityInput))
             {
                 StatusBlock.Text = "Виконується автоматичне визначення за IP…";
@@ -108,7 +107,6 @@ namespace WeatherAppAvalonia
                     throw new JsonException("Неправильний формат відповіді API");
                 }
 
-                // Отримуємо назву міста з nearest_area
                 string? cityName = data.NearestArea?[0]?.AreaName?[0]?.Value;
                 if (string.IsNullOrEmpty(cityName))
                 {
@@ -128,7 +126,7 @@ namespace WeatherAppAvalonia
                 string? descEn = data.CurrentCondition[0].WeatherDesc?[0]?.Value;
                 DescBlock.Text = LocalizeDescription(descEn ?? "Відповідь від сервера відсутня");
 
-                if (descEn != null && IconMap.TryGetValue(descEn, out string iconName))
+                if (descEn != null && IconMap.TryGetValue(descEn, out string? iconName))
                 {
                     var uri = new Uri($"avares://WeatherAppAvalonia/Assets/WeatherIcons/{iconName}.png");
 
