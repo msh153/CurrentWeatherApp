@@ -22,8 +22,7 @@ WeatherAppAvalonia is an application for retrieving the current weather for citi
 1. Navigate to the `out` directory.
 2. Run `WeatherAppAvalonia.exe` by double-clicking it or through the command line:
 
-   ```bash```
-   ./WeatherAppAvalonia.exe
+   ```bash   ./WeatherAppAvalonia.exe```
 
 ## Files in the `out` Directory
 In the `out` directory, you will find the following files:
