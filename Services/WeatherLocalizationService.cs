@@ -5,8 +5,9 @@ using Avalonia.Platform;
 
 namespace WeatherAppAvalonia.Services
 {
-    public class WeatherLocalizationService
+    public class WeatherLocalizationService : IDisposable
     {
+        private readonly Dictionary<string, Bitmap> _iconCache = new();
         private readonly Dictionary<string, string> _desc = new()
         {
             ["Sunny"] = "Сонячно ☀️",
@@ -119,14 +120,41 @@ namespace WeatherAppAvalonia.Services
 
         public Bitmap GetIcon(string? desc)
         {
-            if (desc != null && _icons.TryGetValue(desc, out var iconName))
+            var iconKey = desc ?? "unknown";
+
+            if (_iconCache.TryGetValue(iconKey, out var cachedIcon))
+                return cachedIcon;
+
+            // Знаходимо назву іконки з мапи, або fallback
+            if (!_icons.TryGetValue(iconKey, out var iconName))
+                iconName = "unknown";
+
+            var uri = new Uri($"avares://WeatherAppAvalonia/Assets/WeatherIcons/{iconName}.png");
+            if (AssetLoader.Exists(uri))
             {
-                var uri = new Uri($"avares://WeatherAppAvalonia/Assets/WeatherIcons/{iconName}.png");
-                if (AssetLoader.Exists(uri))
-                    return new Bitmap(AssetLoader.Open(uri));
+                var stream = AssetLoader.Open(uri);
+                var bitmap = new Bitmap(stream);
+                _iconCache[iconKey] = bitmap;
+                return bitmap;
             }
 
-            return new Bitmap("Assets/WeatherIcons/unknown.png");
+            if (!_iconCache.TryGetValue("unknown", out var fallback))
+            {
+                Console.WriteLine("_iconCache");
+                fallback = new Bitmap("Assets/WeatherIcons/unknown.png");
+                _iconCache["unknown"] = fallback;
+            }
+
+            return fallback;
         }
+        
+        public void Dispose()
+        {
+            foreach (var bmp in _iconCache.Values)
+                bmp.Dispose();
+
+            _iconCache.Clear();
+        }
+
     }
 }

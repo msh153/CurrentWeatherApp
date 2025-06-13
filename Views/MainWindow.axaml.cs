@@ -87,5 +87,11 @@ namespace WeatherAppAvalonia.Views
             DescBlock.Text = localization.Localize(desc);
             WeatherIcon.Source = localization.GetIcon(desc);
         }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            localization.Dispose();
+        }
     }
 }
